@@ -1,0 +1,151 @@
+---
+title: "Alumnado UCM"
+author: "Sergio Sánchez"
+date: "`r Sys.Date()`"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: yeti
+    source_code: embed
+    logo: man.png
+    social: ["twitter", "facebook", "menu"]
+    navbar:
+        - {title: "Cifras UCM", href: "https://www.ucm.es/la-universidad-en-cifras", align: left}
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(DT)
+library(plotly)
+
+df <- read_delim("datos_tratados.csv", delim=";") 
+df$CURSO <- factor(df$CURSO)
+df$CENTRO <- factor(df$CENTRO)
+
+# Agrupamos los datos por curso
+grouped_data <- df %>% group_by(CURSO) %>% summarise(across(where(is.numeric), sum))
+
+# Agrupamos los datos por curso
+grouped_data <- df %>% group_by(CURSO) %>% summarise(across(where(is.numeric), sum))
+
+df_4_M <- select(grouped_data, CURSO, TOTAL_MUJERES)
+df_4_H <- select(grouped_data, CURSO, TOTAL_HOMBRES)
+colnames(df_4_M)[2]<-"TOTAL"
+colnames(df_4_H)[2]<-"TOTAL"
+
+df_4_M$GÉNERO <-rep('Mujer', times= nrow(df_4_M))
+
+df_4_H$GÉNERO <-rep('Hombre', times= nrow(df_4_H))
+
+df_5 <-bind_rows(df_4_M, df_4_H)
+
+```
+
+
+
+# Página 1
+## Columna 1
+### Tabla de datos interactiva
+```{r}
+# Crear una tabla interactiva con DT
+tabla_interactiva <- datatable(df, options=list(pageLength=25))
+tabla_interactiva
+```
+
+## Columna 2
+
+### Total de alumnos por curso
+```{r fig.width=10, fig.height=5}
+ggplot(df, aes(x=CURSO, y=TOTAL)) + labs(title = "U.C.M.", x="Curso", y="Total de alumno/as.", caption = "Datos tomados del Centro de Inteligencia Institucional, U.C.M.") +  geom_col(aes(x = CURSO, y = TOTAL), fill = "orange") + theme(axis.text.x=element_text(angle=60, vjust=1, hjust=1, size=8))
+```
+
+# Página 2
+
+## Columna 1
+
+### Distribución de alumnos por género
+
+```{r}
+g1 <-ggplot(df_5, aes(x=CURSO, y=TOTAL, fill=GÉNERO)) + geom_bar(stat="identity", position="dodge") + labs(x="CURSO", y="Total de alumno/as") + scale_fill_manual(values=c("Mujer"='purple', 'Hombre'="green")) + theme(axis.text.x=element_text(angle=60, vjust=1, hjust=1, size=8))
+g2 <- ggplotly(g1)
+g2
+```
+
+## Columna 2
+
+### Distribución de alumnos de los centros de Farmacia y Medicina
+
+```{r fig.width=7, fig.height=5}
+df_3 <-filter(df, CENTRO=="FARMACIA"|CENTRO=="MEDICINA")
+
+df_3$CURSO <-factor(df_3$CURSO)
+df_3$CENTRO <-factor(df_3$CENTRO)
+df_4_M <-select(df_3, CURSO, CENTRO, TOTAL_MUJERES)
+df_4_H <-select(df_3, CURSO, CENTRO, TOTAL_HOMBRES)
+
+colnames(df_4_M)[3]<-"TOTAL"
+colnames(df_4_H)[3]<-"TOTAL"
+
+df_4_M$GÉNERO <-rep('Mujer', times= nrow(df_4_M))
+
+df_4_H$GÉNERO <-rep('Hombre', times= nrow(df_4_H))
+
+# Ahora uno las tablas de Hombre y Mujer
+
+df_5 <-bind_rows(df_4_M, df_4_H)
+
+g1 <-ggplot(df_5) + 
+  geom_boxplot(aes(y=TOTAL, x=CENTRO, fill=GÉNERO) ) + 
+  labs(
+       x="CURSO", 
+       y="Total de alumno/as \n", 
+       caption= "Fuente: El Centro de Inteligencia Institucional, UCM.") + theme(axis.text.x=element_text(size=8),                                                
+        #arriba(top), izquierda(left), derecha(right)
+        legend.position = "right",)
+
+g1
+```
+
+### Cuadro de texto sin título {data-height=190 .no-title}
+El gráfico de caja y bigotes compara el número de estudiantes por género en **Farmacia** y **Medicina**. Para ambos cursos, las mujeres predominan el total, con valores en torno a 1.800 mujeres frente a 600 hombres en **Farmacia**, y aproximadamente 2.100 mujeres frente a 750 hombres en **Medicina**.
+
+Al comparar ambos cursos, **Medicina** tiene más alumnado total que **Farmacia** en ambos géneros y presenta mayor variabilidad, sobre todo entre los hombres. **Farmacia**, en cambio, muestra cifras más bajas y distribuciones más estables.
+
+*En resumen, Medicina es una carrera más numerosa, mientras que Farmacia tiene menos estudiantes pero un predominio femenino más marcado.*
+
+# Página 3
+
+## Columna 1
+
+### Gráfico de barras apiladas 
+
+```{r fig.width=10, fig.height=5}
+df_6 <- filter(df, CENTRO == "FARMACIA" | CENTRO == "MEDICINA")
+
+df_6$CURSO <- factor(df_6$CURSO)
+df_6$CENTRO <- factor(df_6$CENTRO)
+
+g3 <-ggplot(df_6) +
+  geom_col(aes(x = CURSO, y = TOTAL, fill = CENTRO), position = "stack") +   
+  labs(x = "Curso",
+       y = "Total de alumno/as.", caption = "Datos tomados del Centro de Inteligencia Institucional, U.C.M."
+  ) +
+  theme(axis.text.x = element_text(angle = 60, vjust = 1, hjust = 1, size = 8),
+        # arriba(top), izquierda (left), derecha (right), abajo (bottom)
+        legend.position = "right"  
+  ) 
+
+g3
+```
+  
+### Comentarios {data-height=110 .no-title}
+El gráfico muestra la evolución del total de alumnado en los centros de **Farmacia** y **Medicina** de la UCM a lo largo de los cursos académicos desde 2007-2008 hasta 2022-2023, mediante barras apiladas.
+
+Se observa que **Medicina** concentra sistemáticamente más estudiantes que **Farmacia** en todos los cursos. El alumnado total crece de forma progresiva desde 2007-2008 hasta alcanzar un máximo alrededor de 2013-2014, con cerca de 6.000 estudiantes en conjunto. A partir de ese curso, se aprecia una tendencia descendente continuada en ambas titulaciones, más acusada desde 2016-2017.
+
+En los últimos cursos, especialmente entre 2020-2021 y 2022-2023, el número total de estudiantes disminuye de forma clara, situándose en torno a 4.600–4.800 alumnos, manteniéndose siempre la mayor aportación de **Medicina** al total.
+
+
+
